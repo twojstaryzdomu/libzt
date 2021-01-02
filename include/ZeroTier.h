@@ -37,7 +37,8 @@
 
 #include <stdint.h>
 
-#ifdef _WIN32
+//#ifdef _WIN32
+#if 0
 	#ifdef ADD_EXPORTS
 		#define ZT_SOCKET_API __declspec(dllexport)
 	#else
@@ -71,6 +72,8 @@ typedef int socklen_t;
 #include <stdint.h>
 #include <WS2tcpip.h>
 #include <Windows.h>
+#else
+#include <sys/socket.h>
 #endif
 
 #if defined(_MSC_VER)
@@ -92,7 +95,7 @@ typedef uint16_t zts_in_port_t;
 typedef uint8_t zts_sa_family_t;
 
 struct zts_in_addr {
-  zts_in_addr_t s_addr;
+  zts_in_addr_t zts_s_addr;
 };
 
 struct zts_in6_addr {

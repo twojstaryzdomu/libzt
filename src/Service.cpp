@@ -384,6 +384,7 @@ public:
 				}
 				if (_trialBind(_primaryPort)) {
 					_ports[0] = _primaryPort;
+					break;
 				} else {
 					_primaryPort = 0;
 				}

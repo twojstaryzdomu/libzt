@@ -37,6 +37,8 @@
 extern int errno;
 #endif
 
+#include <condition_variable>
+
 #include "Phy.hpp"
 #include "Thread.hpp"
 #include "InetAddress.hpp"
@@ -214,7 +216,9 @@ public:
 
 	Thread _thread;
 
-	int _shutdownSignalPipe[2];
+	bool shutdownSignal;
+	std::mutex shutdownSignalMutex;
+	std::condition_variable shutdownSignalConditionTrue;
 
 	std::string _dev; // path to Unix domain socket
 
