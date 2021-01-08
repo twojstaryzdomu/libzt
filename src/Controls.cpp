@@ -323,7 +323,7 @@ void _zts_run_callbacks()
 	jint rs = jvm->DetachCurrentThread();
     pthread_exit(0);
 #endif
-	return NULL;
+	//return NULL;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -665,9 +665,9 @@ int zts_restart()
 	is replicated here */
 #ifdef SDK_JNI
 	_userCallbackMethodRef = _tmpUserCallbackMethodRef;
-	return zts_start(tmpPath.c_str(), NULL, tmpPort);
+	return ::zts_start(tmpPath.c_str(), NULL, tmpPort);
 #else
-	return zts_start(tmpPath.c_str(), _tmpUserEventCallbackFunc, tmpPort);
+	return ::zts_start(tmpPath.c_str(), _tmpUserEventCallbackFunc, tmpPort);
 #endif
 }
 #ifdef SDK_JNI

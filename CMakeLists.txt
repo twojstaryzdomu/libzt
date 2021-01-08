@@ -133,8 +133,12 @@ set (DEBUG_OPTIMIZATION "-O3")
 set (RELEASE_OPTIMIZATION "-O3")
 
 if (BUILDING_WIN)
-	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -idirafter ${PROJECT_SOURCE_DIR}/include/mingw-fixes")
-	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNOMINMAX -idirafter ${PROJECT_SOURCE_DIR}/include/mingw-fixes")
+	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNOMINMAX")
+	if (MINGW_CROSS)
+		set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -idirafter ${PROJECT_SOURCE_DIR}/include/mingw-fixes")
+		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -idirafter ${PROJECT_SOURCE_DIR}/include/mingw-fixes")
+	endif ()
 else ()
 	set (CMAKE_C_FLAGS
 		"${CMAKE_C_FLAGS} \

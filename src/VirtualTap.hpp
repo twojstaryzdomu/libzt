@@ -33,8 +33,10 @@
 #ifndef LIBZT_VIRTUALTAP_HPP
 #define LIBZT_VIRTUALTAP_HPP
 
-#ifndef _MSC_VER
-extern int errno;
+#ifdef _MSC_VER
+//extern int errno;
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
 #endif
 
 #include <condition_variable>
