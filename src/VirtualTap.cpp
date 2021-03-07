@@ -224,7 +224,9 @@ void VirtualTap::put(const MAC &from,const MAC &to,unsigned int etherType,
 	const void *data,unsigned int len)
 {
 	if (len <= _mtu && _enabled) {
+		LOCK_TCPIP_CORE();
 		_lwip_eth_rx(this, from, to, etherType, data, len);
+		UNLOCK_TCPIP_CORE();
 	}
 }
 
@@ -523,12 +525,14 @@ void _lwip_eth_rx(VirtualTap *tap, const MAC &from, const MAC &to, unsigned int 
 	// Feed packet into stack
 	int err;
 
+	if(tap->netif4)
 	if (Utils::ntoh(ethhdr.type) == 0x800 || Utils::ntoh(ethhdr.type) == 0x806) {
 		if ((err = ((struct netif *)tap->netif4)->input(p, (struct netif *)tap->netif4)) != ERR_OK) {
 			DEBUG_ERROR("packet input error (%d)", err);
 			pbuf_free(p);
 		}
 	}
+	if(tap->netif6)
 	if (Utils::ntoh(ethhdr.type) == 0x86DD) {
 		if ((err = ((struct netif *)tap->netif6)->input(p, (struct netif *)tap->netif6)) != ERR_OK) {
 			DEBUG_ERROR("packet input error (%d)", err);

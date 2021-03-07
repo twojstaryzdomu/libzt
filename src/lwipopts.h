@@ -49,8 +49,9 @@
 ------------------------------------------------------------------------------*/
 
 // Misc
+#define IPV6_FRAG_COPYHEADER 1
 #define LWIP_STATS_LARGE                1
-#define LWIP_NOASSERT                   1
+//#define LWIP_NOASSERT                   1
 #if __ANDROID__
 #define LWIP_DONT_PROVIDE_BYTEORDER_FUNCTIONS 0
 #endif
@@ -119,7 +120,7 @@
 // tcpip
 #define TCPIP_MBOX_SIZE                 0
 #define LWIP_TCPIP_CORE_LOCKING         1
-#define LWIP_TCPIP_CORE_LOCKING_INPUT   0
+#define LWIP_TCPIP_CORE_LOCKING_INPUT   1
 // netconn
 #define LWIP_NETCONN_FULLDUPLEX         0
 // netif
@@ -127,6 +128,23 @@
 #define LWIP_NETIF_HWADDRHINT           1
 #define LWIP_NETIF_TX_SINGLE_PBUF       0
 #define TCPIP_THREAD_PRIO               1
+
+#define LWIP_ASSERT_CORE_LOCKED() sys_check_core_locking()
+#define LWIP_MARK_TCPIP_THREAD() sys_mark_tcpip_thread()
+#define LOCK_TCPIP_CORE() sys_lock_tcpip_core()
+#define UNLOCK_TCPIP_CORE() sys_unlock_tcpip_core()
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+void sys_check_core_locking();
+void sys_mark_tcpip_thread();
+void sys_lock_tcpip_core();
+void sys_unlock_tcpip_core();
+#ifdef __cplusplus
+}
+#endif
+
 
 /*------------------------------------------------------------------------------
 ------------------------------------ Timers ------------------------------------
