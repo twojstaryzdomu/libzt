@@ -119,7 +119,8 @@ public:
 	void threadMain()
 		throw();
 
-#if defined(__MINGW32__)
+//#if defined(__MINGW32__)
+#if 0
 	/* The following is merely to make ZeroTier's OneService happy while building on Windows.
 		we won't use these in libzt */
 	NET_LUID _deviceLuid;

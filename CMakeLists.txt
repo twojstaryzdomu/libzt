@@ -439,13 +439,13 @@ set_target_properties (${STATIC_LIB_NAME} PROPERTIES
     OUTPUT_NAME zt
     LIBRARY_OUTPUT_DIRECTORY ${INTERMEDIATE_LIBRARY_OUTPUT_PATH})
 set_target_properties (${STATIC_LIB_NAME} PROPERTIES COMPILE_FLAGS "${ZT_FLAGS}")
-if (BUILDING_WIN)
-	target_link_libraries (
-		${STATIC_LIB_NAME}
-		${ws2_32_LIBRARY_PATH}
-		${shlwapi_LIBRARY_PATH}
-		${iphlpapi_LIBRARY_PATH})
-endif ()
+#if (BUILDING_WIN)
+#	target_link_libraries (
+#		${STATIC_LIB_NAME}
+#		${ws2_32_LIBRARY_PATH}
+#		${shlwapi_LIBRARY_PATH}
+#		${iphlpapi_LIBRARY_PATH})
+#endif ()
 
 # libzt.so/dylib/dll
 add_library (${DYNAMIC_LIB_NAME} SHARED ${libztSrcGlob})
