@@ -1,55 +1,58 @@
 /*
- * ZeroTier SDK - Network Virtualization Everywhere
- * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (c)2013-2020 ZeroTier, Inc.
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file in the project's root directory.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Change Date: 2024-01-01
  *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2.0 of the Apache License.
+ */
+/****/
+
+/**
+ * @file
  *
- * --
- *
- * You can be released from the requirements of the license by purchasing
- * a commercial license. Buying such a license is mandatory as soon as you
- * develop commercial closed-source software that incorporates or links
- * directly against ZeroTier software without disclosing the source code
- * of your own application.
+ * Header for ZeroTier Node Service (a distant relative of OneService)
  */
 
-#ifndef ZT_ONESERVICE_HPP
-#define ZT_ONESERVICE_HPP
+#ifndef ZT_NODE_SERVICE_HPP
+#define ZT_NODE_SERVICE_HPP
 
 #include <string>
 #include <vector>
 
-#ifdef SDK_JNI
-#include <jni.h>
+#include "Node.hpp"
+#include "InetAddress.hpp"
+#include "Mutex.hpp"
+#include "ZeroTierSockets.h"
+
+#define ZTS_SERVICE_THREAD_NAME           "ZTServiceThread"
+#define ZTS_EVENT_CALLBACK_THREAD_NAME    "ZTEventCallbackThread"
+// Interface metric for ZeroTier taps -- this ensures that if we are on WiFi and also
+// bridged via ZeroTier to the same LAN traffic will (if the OS is sane) prefer WiFi.
+#define ZT_IF_METRIC                      5000
+// How often to check for new multicast subscriptions on a tap device
+#define ZT_TAP_CHECK_MULTICAST_INTERVAL   5000
+// How often to check for local interface addresses
+#define ZT_LOCAL_INTERFACE_CHECK_INTERVAL 60000
+
+#ifdef __WINDOWS__
+#include <Windows.h>
 #endif
 
 namespace ZeroTier {
 
-class VirtualTap;
-// Use the virtual libzt endpoint instead of a tun/tap port driver
-namespace ZeroTier { typedef VirtualTap EthernetTap; }
-
-// Forward declaration so we can avoid dragging everything in
-struct InetAddress;
-class Node;
-
 /**
  * Local service for ZeroTier One as system VPN/NFV provider
  */
-class OneService
+class NodeService
 {
 public:
+
+	uint16_t _userProvidedPort;
+	std::string _userProvidedPath;
 
 	/**
 	 * Returned by node main if/when it terminates
@@ -122,9 +125,9 @@ public:
 	 * @param hp Home path
 	 * @param port TCP and UDP port for packets and HTTP control (if 0, pick random port)
 	 */
-	static OneService *newInstance(const char *hp,unsigned int port);
+	static NodeService *newInstance(const char *hp,unsigned int port);
 
-	virtual ~OneService();
+	virtual ~NodeService();
 
 	/**
 	 * Execute the service main I/O loop until terminated
@@ -165,7 +168,7 @@ public:
 	 */
 	virtual void getRoutes(uint64_t nwid, void *routeArray, unsigned int *numRoutes) = 0;
 
-	virtual int networkCount() = 0;
+	virtual size_t networkCount() = 0;
 	virtual void leaveAll() = 0;
 	virtual void join(uint64_t nwid) = 0;
 	virtual void leave(uint64_t nwid) = 0;
@@ -191,12 +194,27 @@ public:
 	inline bool isRunning() const { return (this->reasonForTermination() == ONE_STILL_RUNNING); }
 
 protected:
-	OneService() {}
+	NodeService() {}
 
 private:
-	OneService(const OneService &one) {}
-	inline OneService &operator=(const OneService &one) { return *this; }
+	NodeService(const NodeService &one) {}
+	inline NodeService &operator=(const NodeService &one) { return *this; }
 };
+
+struct serviceParameters
+{
+	int port;
+	std::string path;
+};
+
+#ifdef __WINDOWS__
+DWORD WINAPI _runNodeService(LPVOID arg);
+#else
+/**
+ * NodeService thread
+ */
+void *_runNodeService(void *arg);
+#endif
 
 } // namespace ZeroTier
 

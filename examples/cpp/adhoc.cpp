@@ -1,7 +1,7 @@
 /**
  * libzt API example
  *
- * Pingable node joined to public ZT network "earth"
+ * Pingable node joined to controller-less adhoc network with a 6PLANE addressing scheme
  */
 
 /**
@@ -99,6 +99,7 @@ void myZeroTierEventCallback(void *msgPtr)
 {
 	struct zts_callback_msg *msg = (struct zts_callback_msg *)msgPtr;
 
+	// Node events
 	if (msg->eventCode == ZTS_EVENT_NODE_ONLINE) {
 		printf("ZTS_EVENT_NODE_ONLINE --- This node's ID is %llx\n", msg->node->address);
 		nodeReady = true;
@@ -106,6 +107,12 @@ void myZeroTierEventCallback(void *msgPtr)
 	if (msg->eventCode == ZTS_EVENT_NODE_OFFLINE) {
 		printf("ZTS_EVENT_NODE_OFFLINE --- Check your physical Internet connection, router, firewall, etc. What ports are you blocking?\n");
 		nodeReady = false;
+	}
+
+	// Virtual network events
+	if (msg->eventCode == ZTS_EVENT_NETWORK_NOT_FOUND) {
+		printf("ZTS_EVENT_NETWORK_NOT_FOUND --- Are you sure %llx is a valid network?\n",
+			msg->network->nwid);
 	}
 	if (msg->eventCode == ZTS_EVENT_NETWORK_REQ_CONFIG) {
 		printf("ZTS_EVENT_NETWORK_REQ_CONFIG --- Requesting config for network %llx, please wait a few seconds...\n", msg->network->nwid);
@@ -122,13 +129,23 @@ void myZeroTierEventCallback(void *msgPtr)
 	if (msg->eventCode == ZTS_EVENT_NETWORK_DOWN) {
 		printf("ZTS_EVENT_NETWORK_DOWN --- %llx\n", msg->network->nwid);
 	}
-	if (msg->eventCode == ZTS_EVENT_ADDR_ADDED_IP4) {
-		char ipstr[ZTS_INET_ADDRSTRLEN];
-		struct zts_sockaddr_in *in4 = (struct zts_sockaddr_in*)&(msg->addr->addr);
-		zts_inet_ntop(ZTS_AF_INET, &(in4->sin_addr), ipstr, ZTS_INET_ADDRSTRLEN);
-		printf("ZTS_EVENT_ADDR_NEW_IP4 --- Join %llx and ping me at %s\n", 
-			msg->addr->nwid, ipstr);
+
+	// Network stack events
+	if (msg->eventCode == ZTS_EVENT_NETIF_UP) {
+		printf("ZTS_EVENT_NETIF_UP --- network=%llx, mac=%llx, mtu=%d\n", 
+			msg->netif->nwid,
+			msg->netif->mac,
+			msg->netif->mtu);
+		networkReady = true;
 	}
+	if (msg->eventCode == ZTS_EVENT_NETIF_DOWN) {
+		printf("ZTS_EVENT_NETIF_DOWN --- network=%llx, mac=%llx\n", 
+			msg->netif->nwid,
+			msg->netif->mac);
+		networkReady = true;
+	}
+
+	// Address events
 	if (msg->eventCode == ZTS_EVENT_ADDR_ADDED_IP6) {
 		char ipstr[ZTS_INET6_ADDRSTRLEN];
 		struct zts_sockaddr_in6 *in6 = (struct zts_sockaddr_in6*)&(msg->addr->addr);
@@ -136,6 +153,8 @@ void myZeroTierEventCallback(void *msgPtr)
 		printf("ZTS_EVENT_ADDR_NEW_IP6 --- Join %llx and ping me at %s\n", 
 			msg->addr->nwid, ipstr);
 	}
+
+	// Peer events
 	// Don't worry if you don't recognize a peer ID, it's most likely our infrastructure
 	if (msg->eventCode == ZTS_EVENT_PEER_DIRECT) {
 		printf("ZTS_EVENT_PEER_DIRECT --- There is now a direct path to peer %llx\n",
@@ -147,16 +166,45 @@ void myZeroTierEventCallback(void *msgPtr)
 	}
 }
 
+/*
+
+Ad-hoc Network:
+
+ffSSSSEEEE000000
+| |   |   |
+| |   |   Reserved for future use, must be 0
+| |   End of port range (hex)
+| Start of port range (hex)
+Reserved ZeroTier address prefix indicating a controller-less network.
+
+Ad-hoc networks are public (no access control) networks that have no network controller. Instead
+their configuration and other credentials are generated locally. Ad-hoc networks permit only IPv6
+UDP and TCP unicast traffic (no multicast or broadcast) using 6plane format NDP-emulated IPv6
+addresses. In addition an ad-hoc network ID encodes an IP port range. UDP packets and TCP SYN
+(connection open) packets are only allowed to destination ports within the encoded range.
+
+For example ff00160016000000 is an ad-hoc network allowing only SSH, while ff0000ffff000000 is an
+ad-hoc network allowing any UDP or TCP port.
+
+Keep in mind that these networks are public and anyone in the entire world can join them. Care must
+be taken to avoid exposing vulnerable services or sharing unwanted files or other resources.
+
+*/
+
 int main(int argc, char **argv) 
 {
-	if (argc != 3) {
+	if (argc != 5) {
 		printf("\nlibzt example\n");
-		printf("earthtest <config_file_path> <ztServicePort>\n");
+		printf("adhoc <config_file_path> <adhocStartPort> <adhocEndPort> <ztServicePort>\n");
 		exit(0);
 	}
-	int ztServicePort = atoi(argv[2]); // Port ZT uses to send encrypted UDP packets to peers (try something like 9994)
-	
+	int adhocStartPort = atoi(argv[2]); // Start of port range your application will use
+	int adhocEndPort = atoi(argv[3]); // End of port range your application will use
+	int ztServicePort = atoi(argv[4]); // Port ZT uses to send encrypted UDP packets to peers (try something like 9994)
+
+	uint64_t adhoc_nwid = zts_generate_adhoc_nwid_from_range(adhocStartPort, adhocEndPort);
 	int err = ZTS_ERR_OK;
+
 	zts_allow_network_caching(false);
 
 	if((err = zts_start(argv[1], &myZeroTierEventCallback, ztServicePort)) != ZTS_ERR_OK) {
@@ -167,13 +215,11 @@ int main(int argc, char **argv)
 	while (!nodeReady) { zts_delay_ms(50); }
 	printf("This node's identity is stored in %s\n", argv[1]);
 
-	uint64_t nwid = 0x8056c2e21c000001;
-
-	if((err = zts_join(nwid)) != ZTS_ERR_OK) {
+	if((err = zts_join(adhoc_nwid)) != ZTS_ERR_OK) {
 		printf("Unable to join network, error = %d. Exiting.\n", err);
 		exit(1);
 	}
-	printf("Joining network %llx\n", nwid);
+	printf("Joining network %llx\n", adhoc_nwid);
 	while (!networkReady) { zts_delay_ms(50); }
 
 	// Idle and just show callback events, stack statistics, etc
